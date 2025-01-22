@@ -118,12 +118,34 @@ void MatmulOperator::mat_mul_simd_programming(struct matmul_params *params) {
                 // (2) use `_mm256_and_si256` and lowMask to extract the lower half of wegihts
                 // (3) use `_mm256_srli_epi16` and `_mm256_and_si256` with lowMask to extract the upper half of weights
                 __m256i raw_w = _mm256_loadu_si256(w_start);
+                __m256i lh_w = _mm256_and_si256(raw_w, lowMask);
+                __m256i hh_w = _mm256_srli_epi16(raw_w, 4);
+                hh_w = _mm256_and_si256(hh_w, lowMask);
 
+                /*uint8_t data[32];
+                printf("full:\n");
+                _mm256_storeu_si256((__m256i*)data, raw_w);
+                for (int i = 0; i < 32 ; i++)
+                    printf("%x ", data[i]);
+
+                printf("lh:\n");
+                _mm256_storeu_si256((__m256i*)data, lh_w);
+                for (int i = 0; i < 32 ; i++)
+                    printf("%x ", data[i]);
+
+                printf("hh:\n");
+                _mm256_storeu_si256((__m256i*)data, hh_w);
+                for (int i = 0; i < 32 ; i++)
+                    printf("%x ", data[i]);
                 // TODO: apply zero_point to weights and convert the range from (0, 15) to (-8, 7)
                 // Hint: using `_mm256_sub_epi8` to the lower-half and upper-half vectors of weights
                 // Note: Store the lower half and upper half of weights into `w_0` and `w_128`, respectively
+                exit(0);*/
                 const __m256i zero_point = _mm256_set1_epi8(8);
                 __m256i w_0, w_128;
+
+                w_0 = _mm256_sub_epi8(lh_w, zero_point);
+                w_128 = _mm256_sub_epi8(hh_w, zero_point);
 
                 // Perform int8 dot product with _mm256_maddubs_epi16
                 /* Syntax of _mm256_maddubs_epi16:
@@ -152,6 +174,8 @@ void MatmulOperator::mat_mul_simd_programming(struct matmul_params *params) {
                 // Hint: use `_mm256_maddubs_epi16` to complete the following computation
                 // dot = ax * sy
                 // dot2 = ax2 * sy2
+                dot = _mm256_maddubs_epi16(ax, sy);
+                dot2 = _mm256_maddubs_epi16(ax2, sy2);
 
                 // Convert int32 vectors to floating point vectors
                 const __m256i ones = _mm256_set1_epi16(1);
